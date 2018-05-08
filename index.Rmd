@@ -1,0 +1,52 @@
+---
+title: "Analysis of a TCGA RNA-seq data set on Lung Squamous Cell Carcinoma"
+author:
+- name: Juan Luis Melero Ollonarte
+  affiliation:
+  - &id Master Programme on Bioinformatics for Health Sciences, Universitat Pompeu Fabra, Barcelona, Spain
+  email: jmelero611@gmail.com
+- name: Marta Sanvicente García
+  affiliation:
+  - &id Master Programme on Bioinformatics for Health Sciences, Universitat Pompeu Fabra, Barcelona, Spain
+  email: ?????
+date: "`r format(Sys.time(), '%B %e, %Y')`"
+output: 
+  BiocStyle::html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+bibliography: bibliography.bib
+---
+
+# Introduction
+
+Lung cancer accounts for more deaths than any other cancer in both men and women, about 28\% of all cancer deaths. The prognosis for lung cancer is poor. The Cancer Genome Atlas (TCGA) has samples of the most common type of lung cancer called non-small cell lung cancers. Specifically, the subtypes being studied are called lung adenocarcinoma and lung squamous cell carcinoma. Here we analyze the expression profiles of those
+patients, accessible in the form of a raw RNA-seq counts using a pipeline based on the R/Bioconductor software package `r Biocpkg("Rsubread")`.
+
+
+
+
+
+```{r echo=FALSE, results='asis'}
+cat(readLines("QAanalysis.knit.md"), sep="\n")
+```
+
+```{r echo=FALSE, results='asis'}
+cat(readLines("DEanalysis.knit.md"), sep="\n")
+```
+
+```{r echo=FALSE, results='asis'}
+cat(readLines("FEanalysis.knit.md"), sep="\n")
+```
+
+
+
+
+
+
+
+
+
+
+
+
