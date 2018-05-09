@@ -452,64 +452,6 @@ legend("bottomleft", paste("Batch", sort(unique(batch)), levels(factor(samplevia
 
 
 
-
-##################### 
-Now, we are going to performe a surrogate variable analysis (SVA) to try to capture sources of heterogeneity in our data that are introducing variability by batch effects. We will obtain the number of "surrogate variables" and their continuous values. Later we will use them to adjust for these unmeasured and unwanted effects.
-
-We start building the design matrix of the full model Next, create the design matrix of the null model where, in this case, we are going to adjust for concentration. When there were no factor to adjust we would just give the intercept term by writing ~ 1 in the model formula:
-
-```{r}
-mod <- model.matrix(~se.filt$type, data = colData(se.filt))
-head(mod)
-mod0 <- model.matrix(~1, data = colData(se.filt))
-```
-
-We estimate the surrogate variables:
-
-```{r}
-library("sva")
-sv <- sva(assays(se.filt)$logCPM, mod, mod0)
-names(sv)
-```
-
-Then we examine how many genes change across conditions without adjustment. It is useful for comparing the model with and without surrogate variables, even we are using the logCPM that is not the best approach.
-
-```{r}
-pValues <- f.pvalue(logCPM, mod, mod0)
-sum(p.adjust(pValues, method = "BH") < 0.01)
-```
-
-There are `r sum(p.adjust(pValues, method = "BH") < 0.01)` differentially expressed genes with FDR < 1%.
-
-Examine the p-values distribution:
-
-```{r}
-hist(pValues, main = "", las = 1)
-```
-
-A distribution of p-values under the null hypothesis should be uniform. Assuming that most genes are not differentially expressed (DE), the previous histogram should have looked uniform with a peak at low p-values for the truly DE genes. Departures from this indicate data heterogeneity. The peak of the truly differential expressed genes seams to be too big to be sure if the rest of the distribution is uniform. 
-
-Number of changes when we adjust for the estimated surrogate variables:
-
-```{r}
-modSv <- cbind(mod, sv$sv)
-mod0Sv <- cbind(mod0, sv$sv)
-pValuesSv <- f.pvalue(logCPM, modSv, mod0Sv)
-sum(p.adjust(pValuesSv, method = "BH") < 0.01)
-```
-
-The number of changing genes has increased from `r sum(p.adjust(pValues, method = "BH") < 0.01)` to `r sum(p.adjust(pValuesSv, method = "BH") < 0.01)` and the p-value distribution is more uniform now for the non-DE genes.
-
-```{r}
-hist(pValuesSv, main = "", las = 1)
-```
-
-Now it looks more uniform for non DE-genes...
-#######################################
-
-
-
-
 Removing the batch effect with QR decomposition:
 
 ```{r}
