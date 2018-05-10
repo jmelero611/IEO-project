@@ -23,7 +23,7 @@ se.filt.unnorm <- readRDS(file.path("results", "se.filt.unnorm.rds"))
 dge.filt.unnorm <- readRDS(file.path("results", "dge.filt.unnorm.rds"))
 se.filt <- readRDS(file.path("results", "se.filt.rds"))
 dge.filt <- readRDS(file.path("results", "dge.filt.rds"))
-se.flit.batch <- readRDS(file.path("results", "se.filt.batch.rds"))
+se.filt.batch <- readRDS(file.path("results", "se.filt.batch.rds"))
 dge.filt.batch <- readRDS(file.path("results", "dge.filt.batch.rds"))
 
 ```
@@ -36,25 +36,23 @@ Now, we are going to performe a surrogate variable analysis (SVA) to try to capt
 We start building the design matrix of the full model. Next, create the design matrix of the null model. When there were no factor to adjust we would just give the intercept term by writing ~ 1 in the model formula:
 
 ```{r}
-mod <- model.matrix(~se.filt$type, data = colData(se.filt))
-#mod <- model.matrix(~se.filt.batch$type, data = colData(se.filt.batch))
+mod <- model.matrix(~se.filt.batch$type, data = colData(se.filt.batch))
 head(mod)
-mod0 <- model.matrix(~1, data = colData(se.filt))
+mod0 <- model.matrix(~1, data = colData(se.filt.batch))
 ```
 
 We estimate the surrogate variables:
 
 ```{r}
 library("sva")
-sv <- sva(assays(se.filt)$logCPM, mod, mod0)
-#sv <- sva(assays(se.filt.batch)$logCPM, mod, mod0)
+sv <- sva(assays(se.filt.batch)$logCPM, mod, mod0)
 names(sv)
 ```
 
 Then we examine how many genes change across conditions without adjustment. It is useful for comparing the model with and without surrogate variables, even we are using the logCPM that is not the best approach.
 
 ```{r}
-pValues <- f.pvalue(logCPM, mod, mod0)
+pValues <- f.pvalue(assays(se.filt.batch)$logCPM, mod, mod0)
 sum(p.adjust(pValues, method = "BH") < 0.01)
 ```
 
@@ -66,7 +64,9 @@ Examine the p-values distribution:
 hist(pValues, main = "", las = 1)
 ```
 
-A distribution of p-values under the null hypothesis should be uniform. Assuming that most genes are not differentially expressed (DE), the previous histogram should have looked uniform with a peak at low p-values for the truly DE genes. Departures from this indicate data heterogeneity. The peak of the truly differential expressed genes seems to be too big to be sure if the rest of the distribution is uniform. 
+A distribution of p-values under the null hypothesis should be uniform. Assuming that most genes are not differentially expressed (DE), the previous histogram should have looked uniform with a peak at low p-values for the truly DE genes. Departures from this indicate data heterogeneity. The peak of the truly differential expressed genes seems to be too big to be sure if the rest of the distribution is uniform. However, there seems to be a tendency to be decreasing, but now uniform.
+
+Now, we will calculate the number of genes differentially expressed, with the p-value adjusted, but taking into account and correcting for the surrogated variables.
 
 Number of changes when we adjust for the estimated surrogate variables:
 
@@ -83,22 +83,18 @@ The number of changing genes has increased from `r sum(p.adjust(pValues, method 
 hist(pValuesSv, main = "", las = 1)
 ```
 
-Now it looks more uniform for non DE-genes...
+Correcting for the surrogated variables, the distirbution of the p-values changes a little bit. However, the peak of the p-values from the genes that are really differentially expressed continues to be too high to distinguish it well. However, the colums for p-values > 0.05 are more little and seems to be more uniform, but it is only eyeballing the plot.
 
-Just to see a little bit more the genes that are really differentially expressed, we plot a volcano plot with the p-values corrected for the surrogated variables.
+Just to see a little bit more the distribution of the genes that are really differentially expressed, we draw a volcano plot with the p-values corrected for the surrogated variables.
 
 ```{r}
-tumorExp <- rowMeans(assays(se.filt)$logCPM[, se.filt$type == "tumor"])
-normalExp <- rowMeans(assays(se.filt)$logCPM[, se.filt$type == "normal"])
+tumorExp <- rowMeans(assays(se.filt.batch)$logCPM[, se.filt.batch$type == "tumor"])
+normalExp <- rowMeans(assays(se.filt.batch)$logCPM[, se.filt.batch$type == "normal"])
 
 log2fc <- tumorExp - normalExp
-head(log2fc)
 
 tab <- data.frame(Log2FC = round(log2fc, digits = 3), Pvalue = pValuesSv)
 tab$FDRpvalue <- p.adjust(tab$Pvalue, method = "fdr")
-length(tab$Log2FC)
-length(tab$Pvalue)
-
 
 plot(tab$Log2FC, -log10(tab$Pvalue), pch=".", cex=3, xlab="Log fold-change", ylab="Raw p-value", las=1)
 abline(h=-log10(max(tab$Pvalue[tab$FDRpvalue <= 0.01])), lty=2)
@@ -106,7 +102,7 @@ abline(h=-log10(max(tab$Pvalue[tab$FDRpvalue <= 0.01])), lty=2)
 
 ```
 
-As we can see in the volcano plot, there are a lot of genes with an FDR < 0.01.
+As we can see in the volcano plot, there are a lot of genes with an FDR < 0.01, that seems to be significantly different. Moreover, there are some of the genes that in addition to the low p-value, they have a large absolute value of fold change. These genes are differentially expressed and the difference of the expression is high.
 
 
 ## Session information
