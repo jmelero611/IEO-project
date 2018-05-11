@@ -62,8 +62,8 @@ dge <- DGEList(counts=assays(se)$counts, genes=mcols(se))
 saveRDS(dge, file.path("results", "dge.rds"))
 ```
 
-Now calculate $\log_2$ CPM values of expression and put them as an additional
-assay element to ease their manipulation.
+Now we calculate $\log_2$ CPM values of expression and put them as an additional
+assay element to make easier their manipulation.
 
 ```{r}
 assays(se)$logCPM <- cpm(dge, log=TRUE, prior.count=0.5)
@@ -89,6 +89,11 @@ barplot(dge$sample$lib.size[ord]/1e6, las=1, ylab="Millions of reads",
                 xlab="Samples", col=c("blue", "red")[(se$type[ord] == "tumor") + 1])
 legend("topleft", c("tumor", "normal"), fill=c("red", "blue"), inset=0.01)
 ```
+
+#Estan al revés, les que n'hi ha moltes són les tumorals. Això és perquè l'ordre que fa servir és l'ordre alfabètic, llavors primer ve "normal" i després ve "tumoral". Llavors la llegenda està "al revés". No? Segons les dades que estan al moodle, tenim més tumorals.
+
+#A part, estas dividint dos cops per un milió, no? Un cop quan crees la variable "ord" i l'altre quan far el barplot. En el power point només ho fa un cop, això sembla un error del template.
+
 Surprisingly, ther is a huge amount of normal samples showing a bigger amount of reads than tumor samples. This figure reveals substantial differences in sequencing depth between samples and we may consider discarding those samples whose depth is substantially lower than the rest. To identify who are these samples we may simply look at the actual numbers including portion of the sample identifier that distinguishes them.
 
 ```{r}
@@ -126,6 +131,8 @@ hist(avgexp, xlab="log2 CPM", main="", las=1, col="steelblue")
 abline(v=1, col="red", lwd=2)
 ```
 
+#Algun comentari d'aquesta figura??
+
 We can also make an MA-plot to see biases due to expression. First, we define the groups that we want to compare. In our case, we use the sample type to define groups, by modifying the DGEList object as follows:
 
 ```{r}
@@ -133,12 +140,14 @@ dge$samples$group <- se$type
 table(dge$samples$group)
 ```
 
-Here we generate the MA-plot using type sample as grouping fator. 
+Here we generate the MA-plot using type sample as grouping factor. 
 
 ```{r}
 plotSmear(dge, lowess = TRUE, las = 1, cex.lab = 1.5, cex.axis = 1.2)
 abline(h = 0, col = "blue", lwd = 2)
 ```
+
+#Comenari del MA-plot?
 
 ## Filtering of lowly-expressed genes
 
@@ -163,7 +172,7 @@ saveRDS(dge.filt, file.path("results", "dge.filt.unnorm.rds"))
 ```
 
 We can also use a second approach to filter data using the CPM cutoff value of expression.
-We will keep only genes that have this minimum level of expresseion in at least as many samples as the smallest group of comparison. We are still comparing sample type. 
+We will keep only genes that have this minimum level of expression in at least as many samples as the smallest group of comparison. We are still comparing sample type. 
 
 ```{r}
 cpmcutoff <- round(10/min(dge$sample$lib.size/1e+06), digits = 1)
@@ -190,7 +199,9 @@ saveRDS(se.filt2, file.path("results", "se.filt2.unnorm.rds"))
 saveRDS(dge.filt2, file.path("results", "dge.filt2.unnorm.rds"))
 ```
 
+
 Comparing both approaches to filtering lowly-expressed genes.
+#We will compare both approaches done before in order to compare them and see which one discards more genes and is more restrictive.
 
 ```{r}
 par(mar = c(4, 5, 1, 1))
@@ -204,6 +215,8 @@ legend("topright", c("All genes", "Filtered genes", "Filtered 2 genes"), fill=c(
 ```
 
 After comparing bath approaches used in the filter of low expressed genes, we have decided to contunue working with the first set of filtered genes because this is more strict. We an see in Figure ((add the reference!!)) that the second approach is more conservative with our data set. 
+
+#We will make a first attempt using the first approach, which is more restrictive. If the accuracy and/or the sample size is not enough during the workflow, then we will consider to change the method of discarding genes.
 
 ## Normalization
 
@@ -248,7 +261,7 @@ table(dge$samples$group)
 dge.filt$samples$group <- se$type
 ```
 
-Here we generate the MA-plot using type sample as grouping fator. 
+Here we generate the MA-plot using type sample as grouping factor. 
 
 ```{r}
 plotSmear(dge.filt, lowess = TRUE, las = 1, cex.lab = 1.5, cex.axis = 1.2)
