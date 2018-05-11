@@ -3,22 +3,6 @@ output:
   BiocStyle::html_document
 ---
 
-<!---
-The following chunk of code, which should not be shown in the resulting document (echo=FALSE)
-sets up global processing options, such as forcing 'knitr' to stop when an error
-in the R code is encountered, caching of the results in the 'cache'
-directory and asking 'knitr' to figure out automatically the dependencies among
-code chunks to re-calculate cached results (autodep=TRUE).
-
-Other options could be changing the name of the directory where figures end up
-('figure' by default), etc. For a full account of 'knitr' options please consult
-http://yihui.name/knitr/options
-
-At the end of the chunk a 'cat()' call is made to dump a CSS file that gives
-a better look-and-feel than the knitr default one. See the source css/ieo.css
-and the resulting projectTemplate.html to understand where this is being dumpted.
---->
-
 
 ```{r setup, cache=FALSE, echo=FALSE, results='hide', message=FALSE}
 library(knitr)
@@ -37,11 +21,6 @@ opts_chunk$set(cache=TRUE,
 
 We start importing the raw table of counts.
 
-<!--
-The option 'message=FALSE' avoid dumping R messages such as "Loading required package: methods"
-into the output of the report.
--->
-
 ```{r, message=FALSE}
 library(SummarizedExperiment)
 
@@ -49,8 +28,7 @@ se <- readRDS(file.path("rawCounts", "seLUSC.rds"))
 se
 ```
 
-Explore the column (phenotypic) data, which in this case corresponds to clinical
-variables, and their corresponding metadata.
+Explore the column (phenotypic) data, which in this case corresponds to clinical variables, and their corresponding metadata.
 
 ```{r}
 dim(colData(se))
@@ -111,10 +89,7 @@ barplot(dge$sample$lib.size[ord]/1e6, las=1, ylab="Millions of reads",
                 xlab="Samples", col=c("blue", "red")[(se$type[ord] == "tumor") + 1])
 legend("topleft", c("tumor", "normal"), fill=c("red", "blue"), inset=0.01)
 ```
-This figure reveals substantial differences in sequencing depth between samples
-and we may consider discarding those samples whose depth is substantially lower
-than the rest. To identify who are these samples we may simply look at the
-actual numbers including portion of the sample identifier that distinguishes them.
+Surprisingly, ther is a huge amount of normal samples showing a bigger amount of reads than tumor samples. This figure reveals substantial differences in sequencing depth between samples and we may consider discarding those samples whose depth is substantially lower than the rest. To identify who are these samples we may simply look at the actual numbers including portion of the sample identifier that distinguishes them.
 
 ```{r}
 sampledepth <- round(dge$sample$lib.size / 1e6, digits=1)
@@ -127,13 +102,6 @@ sort(sampledepth)
 Let's look at the distribution of expression values per sample in terms of
 logarithmic CPM units. Due to the large number of samples, we display tumor
 and normal samples separately, and are shown in Figure \@ref(fig:distRawExp)
-
-<!---
-the option echo=FALSE hides the R code. When plotting in general one does not
-want to see the code. Options fig.height and fig.width control height and width
-of the plot in inches while out.height and out.width do it in the final output
-file; see http://yihui.name/knitr/options for full details.
---->
 
 ```{r distRawExp, echo=FALSE, fig.height=4, fig.width=10, out.width="800px", fig.cap="Non-parametric density distribution of expression profiles per sample.", message=FALSE}
 library(geneplotter)
@@ -234,6 +202,8 @@ y <- cut(rowMeans(assays(se.filt2)$logCPM), breaks=h$breaks)
 lines(h$mids+0.1, table(y), type = "h", lwd=5, lend=1, col = "lightgoldenrod")
 legend("topright", c("All genes", "Filtered genes", "Filtered 2 genes"), fill=c("steelblue", "olivedrab", "lightgoldenrod"))
 ```
+
+After comparing bath approaches used in the filter of low expressed genes, we have decided to contunue working with the first set of filtered genes because this is more strict. We an see in Figure ((add the reference!!)) that the second approach is more conservative with our data set. 
 
 ## Normalization
 
@@ -385,7 +355,7 @@ table(data.frame(TYPE=se.filt$type, SAMPLEVIAL=samplevial))
 We examine now how samples group together by hierarchical clustering and multidimensional
 scaling, annotating the outcome of interest and the the surrogate of batch indicator. We
 calculate again log CPM values with a higher prior count to moderate extreme fold-changes
-produced by low counts. The resulting dendrogram is shown in Figure \@ref(fig:sampleClustering).
+produced by low counts. We start analysing the tss factor. The resulting dendrogram is shown in Figure \@ref(fig:sampleClustering).
 
 ```{r sampleClustering, fig.height=7, fig.width=14, dpi=100, echo=TRUE, fig.cap="Figure S6: Hierarchical clustering of the samples."}
 logCPM <- cpm(dge.filt, log=TRUE, prior.count=3)
@@ -418,6 +388,8 @@ legend("bottomleft", paste("Batch", sort(unique(batch)), levels(factor(tss))),
        fill=sort(unique(batch)), inset=0.05)
 ```
 
+Now that we know that there is any batch effect of the tss, we are going to see what happen with the vial sample. We have decided to analyse this factor because the tables show us all normal samples belong to one vial since tumor samples belong to two other vials. This can probably give a batch effect. This means that the experiment is not balanced by this batch (sample vial) because individuals from every outcome do not occur through every batch. 
+
 ```{r sampleClustering, fig.height=7, fig.width=14, dpi=100, echo=TRUE, fig.cap="Figure S6: Hierarchical clustering of the samples."}
 logCPM <- cpm(dge.filt, log=TRUE, prior.count=3)
 d <- as.dist(1-cor(logCPM, method="spearman"))
@@ -439,9 +411,10 @@ plot(sampleDendrogram, main="Hierarchical clustering of samples")
 legend("topright", paste("Batch", sort(unique(batch)), levels(factor(samplevial))), fill=sort(unique(batch)))
 ```
 
-We can observe that samples cluster primarily by sample type, tumor or normal. Sample vial seems to have a stronger effect among the normal and tumor samples. We may consider discarding samples leading to an unbalanced distribution of the outcome across batches.
+We can observe that samples cluster primarily by sample type: tumor or normal. Sample vial seems to have a stronger effect among the normal and tumor samples. We may consider discarding samples leading to an unbalanced distribution of the outcome across batches, because this creates a correlation between outcome and batch that can potentially mask true biological differences and lead to incorrect conclusions.
 
 In \@ref(fig:mdsPlot) we show the corresponding MDS plot. Here we see more clearly that this source of variation separates tumor from normal samples. We can also observe that two tumor samples, corresponding to individuals 4129 and 6560 are separated from the rest, just as it happens in the hierchical clustering. A closer examination of their corresponding MA-plots also reveals a slight dependence of expression changes on average expression. We may consider discarding these two samples and doing the MDS plot again to have a closer look to the differences among the rest of the samples and their relationship with TSS.
+
 
 ```{r mdsPlot, fig.height=7, fig.width=14, dpi=100, echo=TRUE, fig.cap="Figure S7: Multidimensional scaling plot of the samples."}
 plotMDS(dge.filt, labels=outcome, col=batch)
@@ -449,54 +422,24 @@ legend("bottomleft", paste("Batch", sort(unique(batch)), levels(factor(samplevia
        fill=sort(unique(batch)), inset=0.05)
 ```
 
+For the former case, assume that from the previous MDS plot we decide to discard samples of sample vial 4129 and 6560. We can do it by simply subseting the column dimension of the SummarizedExperiment and DGEList objects, as follows.
 
-
-Now, we are going to performe a surrogate variable analysis (SVA) to try to capture sources of heterogeneity in our data that are introducing variability by batch effects. We will obtain the number of "surrogate variables" and their continuous values. Later we will use them to adjust for these unmeasured and unwanted effects.
-
-We start building the design matrix of the full model Next, create the design matrix of the null model where, in this case, we are going to adjust for concentration. When there were no factor to adjust we would just give the intercept term by writing ~ 1 in the model formula:
+```{r}
+maskbad <- colnames(se.filt) %in% c(colnames(se.filt)[substr(colnames(se.filt), 9, 12) == "4129"], colnames(se.filt)[substr(colnames(se.filt), 9, 12) == "6560"])
+dim(se)
+dim(dge.filt)
+se.filt <- se.filt[, !maskbad]
+dge.filt <- dge.filt[, !maskbad]
+dim(se.filt)
+dim(dge.filt)
+```
+We will remove the batch effect that is given by the sample vial. We start building the design matrix of the full model Next, create the design matrix of the null model where, in this case, we are going to adjust for concentration. When there were no factor to adjust we would just give the intercept term by writing ~ 1 in the model formula:
 
 ```{r}
 mod <- model.matrix(~type + ~1, data = colData(se.filt))
 head(mod)
 mod0 <- model.matrix(~1, data = colData(se.filt))
 ```
-
-We estimate the surrogate variables:
-
-```{r}
-sv <- sva(logCPM, mod, mod0)
-names(sv)
-```
-
-Then we examine how many genes change across conditions without adjustment. It is useful for comparing the model with and without surrogate variables, even we are using the logCPM taht is not the best approach.
-```{r}
-pValues <- f.pvalue(logCPM, mod, mod0)
-sum(p.adjust(pValues, method = "BH") < 0.05)
-```
-There are 9547 differentially expressed genes with FDR < 5%.
-
-Examine the p-values:
-```{r}
-hist(pValues, main = "", las = 1)
-```
-
-A distribution of p-values under the null hypothesis should be uniform. Assuming that most genes are not differentially expressed (DE), the previous histogram should have looked uniform with a peak at low p-values for the truly DE genes. Departures from this indicate data heterogeneity. The peak of the truly differential expressed genes seams to be too big to be sure if the rest of the distribution is uniform. 
-
-Number of changes when we adjust for the estimated surrogate variables:
-```{r}
-modSv <- cbind(mod, sv$sv)
-mod0Sv <- cbind(mod0, sv$sv)
-pValuesSv <- f.pvalue(logCPM, modSv, mod0Sv)
-sum(p.adjust(pValuesSv, method = "BH") < 0.05)
-```
-
-The number of changing genes has increased by about 7% and the p-value distribution is more uniform now for the non-DE genes.
-
-```{r}
-hist(pValuesSv, main = "", las = 1)
-```
-
-A distribution of p-values under the null hypothesis should be uniform. Assuming that most genes are not differentially expressed (DE), the previous histogram should have looked uniform with a peak at low p-values for the truly DE genes. Departures from this indicate data heterogeneity. The peak of the truly differential expressed genes seams to be too big to be sure if the rest of the distribution is uniform. 
 
 Removing the batch effect with QR decomposition:
 
@@ -571,6 +514,13 @@ legend("topright", paste("Batch", sort(unique(batch))), fill = sort(unique(batch
 ```
 
 Finally, the batch has disapear. 
+
+We save the adjusted data:
+
+```{r}
+saveRDS(se.filt, file.path("results", "se.filt.batch.rds"))
+saveRDS(dge.filt, file.path("results", "dge.filt.batch.rds"))
+```
 
 ## Session information
 
