@@ -8,7 +8,6 @@ output:
 library(knitr)
 library(SummarizedExperiment)
 library(edgeR)
-library(geneplotter)
 
 opts_chunk$set(cache=TRUE,
                cache.path="cache/file2",
@@ -17,25 +16,10 @@ opts_chunk$set(cache=TRUE,
                fig.align="center",
                comment="")
 
-se <- readRDS(file.path("rawCounts", "seLUSC.rds"))
-dge <- readRDS(file.path("results", "dge.rds"))
-se.filt.unnorm <- readRDS(file.path("results", "se.filt.unnorm.rds"))
-dge.filt.unnorm <- readRDS(file.path("results", "dge.filt.unnorm.rds"))
-se.filt <- readRDS(file.path("results", "se.filt.rds"))
-dge.filt <- readRDS(file.path("results", "dge.filt.rds"))
+se.filt <- readRDS(file.path("results", "paired_se.filt.rds"))
+dge.filt <- readRDS(file.path("results", "paired_dge.filt.rds"))
 ```
 
-First we will try to do a paired analysis. We extract how many patients_id we have.
-
-```{r}
-patients <- se.filt$patient_id
-length(patients)
-## 553
-length(colnames(se.filt))
-## 553
-```
-
-As we see, there are as many patients as samples. This means that every sample comes from a different patient. Therefore, we cannot do any paired test. 
 
 We now proceed with limma analysis. We could use limma-voom or limma-trend. We could even comapre them if we had a gold standard. With a lack of gold standard to compare, we will use limma-voom, because the library sample size is ununiform.
 
@@ -50,6 +34,12 @@ sv <- sva(assays(se.filt)$logCPM, mod = mod, mod0 = mod0)
 
 mod <- cbind(mod, sv$sv)
 colnames(mod) <- c(colnames(mod)[1:2], paste0("SV", 1:sv$n))
+
+table(table(se.filt$anatomic_organ_subdivision))
+
+library(statmod)
+corfit <- duplicateCorrelation(assays(se.filt)$logCPM, mod, block = se.filt$anatomic_organ_subdivision)
+corfit$consensus
 
 v <- voom(dge.filt, mod, plot=TRUE)
 
