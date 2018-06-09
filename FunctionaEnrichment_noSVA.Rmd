@@ -1,0 +1,196 @@
+---
+output:
+  BiocStyle::html_document
+---
+
+
+```{r setup, cache=FALSE, echo=FALSE, results='hide', message=FALSE}
+library(knitr)
+library(SummarizedExperiment)
+library(edgeR)
+library(geneplotter)
+
+opts_chunk$set(cache=TRUE,
+               cache.path="cache/file2",
+               cache.extra=R.version.string,
+               autodep=TRUE,
+               fig.align="center",
+               comment="")
+
+se.filt <- readRDS(file.path("results", "paired_se.filt.rds"))
+dge.filt <- readRDS(file.path("results", "paired_dge.filt.rds"))
+DEgenes <- readRDS(file.path("results", "DEgenes.rds"))
+```
+
+We will start with a Gene Onthology analysis of the DE genes. The first step is safe the identifiers of the of the original set of gene profiled. Then we will follow the main speps of the GO analysis. 
+  1) Build a parameter object with information specifying the gene universe, the set of DE genes, the annotation package to use, etc.
+  2) Run the functional enrichment analysis.
+  3) Store and visualize the results.
+
+```{r}
+geneUniverse <- rownames(se.filt)
+length(geneUniverse)
+```
+
+1)
+```{r, echo=FALSE}
+library(GOstats)
+params <- new("GOHyperGParams", geneIds=DEgenes, universeGeneIds=geneUniverse,
+            annotation="org.Hs.eg.db", ontology="BP",
+            pvalueCutoff=0.05, testDirection="over")
+```
+
+2) 
+```{r}
+hgOver <- hyperGTest(params)
+hgOver
+```
+
+3)
+```{r}
+htmlReport(hgOver, file = "gotests.html")
+browseURL("gotests.html")
+```
+
+This is the data.frame object with the results:
+```{r}
+head(summary(hgOver))
+```
+
+```{r}
+head(geneCounts(hgOver))
+head(universeCounts(hgOver))
+head(pvalues(hgOver))
+```
+
+
+## GO conditional test 
+
+Since a problem in a GO analysis is that the hierarchy of GO terms and their overlap render highly dependent tests. A conditional test is directly used. Then, if parent and child GO term contain the same significant genes, the child node will be retrieved because it is more specific.  
+
+```{r}
+conditional(params) <- TRUE
+hgOverCond <- hyperGTest(params)
+hgOverCond
+```
+As spected we have less significant GO terms than when we perform a non-conditional test. The nomber of significant GO terms have chenged from 426 to 272. 
+
+```{r}
+htmlReport(hgOverCond, file = "goconditionaltests.html")
+```
+
+```{r}
+goresults <- summary(hgOverCond)
+head(goresults)
+```
+
+GO terms involving a few genes (e.g., < 3) in their size (m) and in their enrichment by DE genes (k) are likely to be less reliable than those that involve many genes. Likewise, large GO terms may provide little insight.
+
+To try to spot the more interesting and reliable GO terms we can filter the previous results by a minimum value on the Count and Size columns, a maximum Count value, and order them by the OddsRatio column:
+
+```{r}
+goresults <- goresults[goresults$Size >= 3 & goresults$Size <= 300 & goresults$Count >= 3, ]
+goresults <- goresults[order(goresults$OddsRatio, decreasing=TRUE), ]
+head(goresults)
+```
+
+## Gene set enrichment analysis
+In this case a method for pathway analysis that addresses this shortcoming by assessing DE directly at gene set level is used. Therfore, small but consistent changes occurring for a number of genes operating in a common pathway will be found. To perform this it is calculated for each gene set an enrichment score (ES) as function of the changes in gene expression by the genes forming the gene set.
+
+The used gene set collection has been downloaded from GSEA. It is configured of gene sets that represent signatures of cellular pathways which are often disregulated in cancer.
+
+```{r, echo = FALSE}
+library(GSEABase)
+entrezOncogens <- getGmt("c6.all.v6.1.entrez.gmt", geneIdType = EntrezIdentifier())
+entrezOncogens
+length(entrezOncogens)
+head(names(entrezOncogens))
+```
+
+First we need to map the identifiers from the gene sets to the identifiers of the data we are going to analyze:
+```{r}
+gsc <- mapIdentifiers(entrezOncogens, AnnoOrEntrezIdentifier(metadata(se.filt)$annotation))
+gsc
+```
+
+Nothing has happend, we can jump this step because data is already anchorated to Entrez ientifiers. Then, we have to start with an incidence matrix indicating what genes belong to what gene set:
+```{r}
+Im <- incidence(gsc)
+dim(Im)
+Im[1:2, 1:10]
+```
+
+Next, we discard genes (columns in Im) that do not form part of our data:
+```{r}
+Im <- Im[, colnames(Im) %in% rownames(se.filt)]
+dim(Im)
+```
+
+Likewise, not all genes in our data are annotated to gene sets, so we also discard them:
+```{r}
+se.filt <- se.filt[colnames(Im), ]
+dim(se.filt)
+dge.filt <- dge.filt[colnames(Im), ]
+dim(dge.filt)
+```
+
+```{r}
+library(limma)
+library(sva)
+mod <- model.matrix(~type + bcr_patient_barcode, data = colData(se.filt))
+```
+
+### PERO AQUI EL QUE ESTARIA INTERESSANT SERIA FER TAMBÉ EL PAIRED, NO?
+
+```{r}
+v <- voom(dge.filt, mod, plot=TRUE)
+fit <- lmFit(assays(se.filt)$logCPM, mod)
+fit <- eBayes(fit, trend = TRUE)
+tt <- topTable(fit, coef = 2, n = Inf)
+Im <- Im[rowSums(Im) >= 5, ]
+dim(Im)
+tGSgenes <- tt[match(colnames(Im), rownames(tt)), "t"]
+length(tGSgenes)
+head(tGSgenes)
+zS <- sqrt(rowSums(Im)) * (as.vector(Im %*% tGSgenes)/rowSums(Im))
+length(zS)
+head(zS)
+rnkGS <- sort(abs(zS), decreasing = TRUE)
+head(rnkGS)
+```
+
+# Gene Set Variation Analysis
+
+```{r}
+library(GSVA)
+GSexpr <- gsva(assays(se.filt)$logCPM, gsc, min.sz=5, max.sz=300, verbose=FALSE)
+class(GSexpr)
+dim(GSexpr)
+```
+
+```{r}
+mod <- model.matrix(~se.filt$type, data = colData(se.filt))
+mod0 <- model.matrix(~1, data = colData(se.filt))
+svaobj <- sva(GSexpr, mod, mod0)
+
+modSVs <- cbind(mod, svaobj$sv)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
