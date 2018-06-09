@@ -16,8 +16,8 @@ opts_chunk$set(cache=TRUE,
                fig.align="center",
                comment="")
 
-se.filt <- readRDS(file.path("results", "paired_se.filt.rds"))
-dge.filt <- readRDS(file.path("results", "paired_dge.filt.rds"))
+se.filt <- readRDS(file.path("results", "paired_se.filt.batch.rds"))
+dge.filt <- readRDS(file.path("results", "paired_dge.filt.batch.rds"))
 ```
 
 
@@ -27,16 +27,16 @@ We now proceed with limma analysis. We could use limma-voom or limma-trend. We c
 ```{r}
 library(sva)
 
-mod <- model.matrix(~type, data = colData(se.filt))
+mod <- model.matrix(~type + bcr_patient_barcode, data = colData(se.filt))
 mod0 <- model.matrix(~1, data = colData(se.filt))
 
 
 sv <- sva(assays(se.filt)$logCPM, mod = mod, mod0 = mod0)
 
 mod <- cbind(mod, sv$sv)
-colnames(mod) <- c(colnames(mod)[1:2], paste0("SV", 1:sv$n))
+colnames(mod)
 
-table(table(se.filt$anatomic_organ_subdivision))
+colnames(mod) <- c(colnames(mod)[1:48], paste0("SV", 1:sv$n))
 
 v <- voom(dge.filt, mod, plot=TRUE)
 

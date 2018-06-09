@@ -35,7 +35,10 @@ common_bcr_patient_barcode <- normal[normal %in% tumor]
 length(common_bcr_patient_barcode)
 # 47 patients that are paired
 
+
 paired_seLUSC <- se[,colData(se)$bcr_patient_barcode %in% common_bcr_patient_barcode]
+
+paired_seLUSC$bcr_patient_barcode <- droplevels(paired_seLUSC$bcr_patient_barcode)
 
 saveRDS(paired_seLUSC, file.path("results", "paired_seLUSC.rds"))
 ```

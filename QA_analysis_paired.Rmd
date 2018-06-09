@@ -23,7 +23,8 @@ We start importing the raw table of counts from the SummarizedExperiment contain
 library(SummarizedExperiment)
 
 paired_se <- readRDS(file.path("results", "paired_seLUSC.rds"))
-paired_se
+paired_se$bcr_patient_barcode
+## Levels OK
 ```
 
 The row table of counts contains RNA-seq data from 20115 genes and 94 samples, which come from 47 patients. Samples are already paired .
