@@ -1,0 +1,85 @@
+---
+output:
+  BiocStyle::html_document
+---
+
+
+```{r setup, cache=FALSE, echo=FALSE, results='hide', message=FALSE}
+library(knitr)
+library(SummarizedExperiment)
+library(edgeR)
+
+opts_chunk$set(cache=TRUE,
+               cache.path="cache/file2",
+               cache.extra=R.version.string,
+               autodep=TRUE,
+               fig.align="center",
+               comment="")
+
+se.filt <- readRDS(file.path("results", "paired_se.filt.rds"))
+dge.filt <- readRDS(file.path("results", "paired_dge.filt.rds"))
+```
+
+# Differential expression analysis with limma-voom
+
+In this cas there is no surogate variables analysis. Limma-voom method is performed to adjust for mean-variance relationship. We use lmFit function to calculate the linear model and eBayes function to calculate the moderated t-statistic. Finally, decideTests function will classify into upregulated, downregulated or non-significant.
+```{r}
+library(sva)
+mod <- model.matrix(~type + bcr_patient_barcode, data = colData(se.filt))
+v <- voom(dge.filt, mod, plot=TRUE)
+
+fit <- lmFit(v, mod)
+fit <- eBayes(fit)
+
+FDRcutoff <- 0.1
+res <- decideTests(fit, p.value = FDRcutoff)
+summary(res)
+```
+
+Table of results:
+```{r}
+genesmd <- data.frame(chr = as.character(seqnames(rowRanges(se.filt))), symbol = rowData(se.filt)[, 1], stringsAsFactors = FALSE)
+fit$genes <- genesmd
+tt <- topTable(fit, coef = 2, n = Inf)
+head(tt, n = 10)
+```
+As can be seen looking at the p-values, there are significant differential expressed genes. 
+
+
+DE genes:
+```{r}
+DEgenes <- rownames(tt)[tt$adj.P.Val < FDRcutoff]
+length(DEgenes)
+saveRDS(DEgenes, file.path("results", "DEgenes.rds"))
+```
+There are `r length(DEgenes)`. 
+
+#plot MA with top 10
+
+```{r}
+par(mfrow = c(1, 2), mar = c(4, 5, 3, 2))
+volcanoplot(fit, coef = 2, highlight = 7, names = fit$genes$symbol, main = "Model")
+top10 <- order(fit$lods[, 2], decreasing = TRUE)[1:10]
+limma::plotMA(fit, coef = 2, status = rownames(fit$lods) %in% DEgenes, legend = FALSE, 
+    main = "Model", hl.pch = 46, hl.cex = 4, bg.pch = 46, bg.cex = 3, las = 1)
+text(fit$Amean[top10], fit$coef[top10, 2], fit$genes$symbol[top10], cex = 0.5, pos = 4)
+```
+In the volcano plot is seen the top 10 genes, all of them with a large magnitude fold-change and high statistical significance. 
+
+#plot p-values
+
+```{r}
+par(mfrow = c(1, 2), mar = c(4, 5, 2, 2))
+hist(tt$P.Value, xlab = "Raw P-values", main = "", las = 1)
+qqt(fit$t[, 2], df = fit$df.prior + fit$df.residual, main = "", pch = ".", cex = 3)
+abline(0, 1, lwd = 2)
+```
+
+Both plots show that the disribution is far from being uniform. This may be because some variability not explained neither by the biological factor nor by the surrogate variables. More quality assessments could be done in order to correct for this biases.
+
+
+## Session information
+
+```{r, message=FALSE}
+sessionInfo()
+```

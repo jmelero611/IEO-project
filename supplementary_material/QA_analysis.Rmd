@@ -322,13 +322,13 @@ From this information we can make the following observations:
 
   * All samples were sequenced at the same center
 
-  * Samples belong to three vials.
+  * Samples belong to two vials.
 
   * Samples were collected across different tissue source sites (TSS).
 
-  * Samples were sequenced within differnt plates. There are 26 different plates.
+  * Samples were sequenced within differnt plates. There are 13 different plates.
 
-  * Samples were sequenced using different portions and analyte combinations. There are 10 different conditions described. 
+  * Samples were sequenced using different portions and analyte combinations. There are 5 different conditions described. 
   
 
 We are going to use the TSS as surrogate of batch effect indicator. Considering our outcome
@@ -351,11 +351,9 @@ table(data.frame(TYPE=paired_se.filt$type, SAMPLEVIAL=samplevial))
 
 * All normal samples belong to the same vial and all tumor samples belong to the same vial. As it is remarked in the [documentation](https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/sample-type-codes), this is the correct sample vial for tumoral tissue and for normal tissue. So it does not provoque any variability. Moreover, they are all from the same aliquot (A).
 
-* Normal samples only have two different kind of portion and analyte combinations.
+* The plate is almost equal between normal and tumor.
 
-* The plate is almos equal between normal and tumor.
-
-For these reasons, the variables that may lead into batch effects they do not. 
+For these reasons, the variables that may lead into batch effects are not leading to it, as commented before.  
 
 To ilustrate how samples are grouped together by hierarchical clustering and multidimensional
 scaling, we draw the Dendrogram plot and the MDS plot. We calculate again log CPM values with a higher prior count to moderate extreme fold-changes produced by low counts.
@@ -367,6 +365,7 @@ sampleClustering <- hclust(d)
 batch <- as.integer(factor(paired_se.filt$type))
 sampleDendrogram <- as.dendrogram(sampleClustering, hang=0.1)
 names(batch) <- colnames(paired_se.filt)
+outcome <- paste(substr(colnames(paired_se.filt), 9, 12), as.character(paired_se.filt$type), sep="-")
 names(outcome) <- colnames(paired_se.filt)
 sampleDendrogram <- dendrapply(sampleDendrogram,
                                function(x, batch, labels) {
@@ -391,9 +390,54 @@ legend("bottomleft", paste("Batch", sort(unique(batch)), levels(factor(paired_se
        fill=sort(unique(batch)), inset=0.05)
 ```
 
-For the former case, assume that from the previous MDS plot we could decide discard that mentioned sample. But we will not do it because we have problems with the matrix size after removing this sample.
+For the former case, assume that from the previous MDS plot we could decide discard that mentioned sample, which is identified with the number 8623. But we will not do it because we have problems with the matrix size after removing this sample.
 
 As we have not eliminate batch effects, because we have decided that there is no significant since the samples are paired and most of the technical variables are compensated or the same, we will keep working with the SummarizedExperiment object from filtered genes.
+
+Here is seen the how the samples disapears after it is removed, then all the normal samples and tumor samples cluster together with any exception. 
+
+```{r}
+maskbad <- colnames(paired_se.filt) %in% colnames(paired_se.filt)[substr(colnames(paired_se.filt), 9, 12) == "8623"]
+dim(paired_se.filt)
+dim(paired_dge.filt)
+paired_se.filt <- paired_se.filt[, !maskbad]
+paired_dge.filt <- paired_dge.filt[, !maskbad]
+dim(paired_se.filt)
+dim(paired_dge.filt)
+```
+
+```{r sampleClustering2, fig.height=7, fig.width=14, dpi=100, echo=TRUE, fig.cap="Hierarchical clustering of the samples."}
+logCPM <- cpm(paired_dge.filt, log=TRUE, prior.count=3)
+d <- as.dist(1-cor(logCPM, method="spearman"))
+sampleClustering <- hclust(d)
+batch <- as.integer(factor(paired_se.filt$type))
+sampleDendrogram <- as.dendrogram(sampleClustering, hang=0.1)
+names(batch) <- colnames(paired_se.filt)
+outcome <- paste(substr(colnames(paired_se.filt), 9, 12), as.character(paired_se.filt$type), sep="-")
+names(outcome) <- colnames(paired_se.filt)
+sampleDendrogram <- dendrapply(sampleDendrogram,
+                               function(x, batch, labels) {
+                                 if (is.leaf(x)) {
+                                   attr(x, "nodePar") <- list(lab.col=as.vector(batch[attr(x, "label")]))
+                                   attr(x, "label") <- as.vector(labels[attr(x, "label")])
+                                 }
+                                 x
+                               }, batch, outcome)
+plot(sampleDendrogram, main="Hierarchical clustering of samples")
+legend("topright", paste("Batch", sort(unique(batch)), levels(factor(paired_se.filt$type))), fill=sort(unique(batch)))
+```
+
+```{r mdsPlot2, fig.height=7, fig.width=14, dpi=100, echo=TRUE, fig.cap="Multidimensional scaling plot of the samples."}
+plotMDS(paired_dge.filt, labels=outcome, col=batch)
+legend("bottomleft", paste("Batch", sort(unique(batch)), levels(factor(paired_se.filt$type))),
+       fill=sort(unique(batch)), inset=0.05)
+```
+
+
+```{r}
+saveRDS(paired_se.filt, file.path("results", "paired_se.filt2.rds"))
+saveRDS(paired_dge.filt, file.path("results", "paired_dge.filt2.rds"))
+```
 
 ## Session information
 
