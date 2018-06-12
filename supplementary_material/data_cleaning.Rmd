@@ -1,0 +1,87 @@
+---
+output:
+  BiocStyle::html_document
+---
+
+```{r setup, cache=FALSE, echo=FALSE, results='hide', message=FALSE}
+library(knitr)
+
+opts_chunk$set(cache=TRUE,
+               cache.path="cache/DC",
+               cache.extra=R.version.string,
+               autodep=TRUE,
+               fig.align="center",
+               comment="")
+```
+
+# Import Data
+
+We import the raw data from the SummarizedExperiment. It contains only one assay, in a matrix-like object with the genes in the row and the samples in the columns. The data is the counts for gene and sample.
+
+```{r, message=FALSE}
+library(SummarizedExperiment)
+
+se <- readRDS(file.path("rawCounts", "seLUSC.rds"))
+se
+```
+
+The raw table of counts contains RNA-seq data from 20115 genes and 553 samples.
+
+# Extract paired samples
+
+We want to do a paired experiment. For this reason, from the 553 samples, we will keep those that share patient identification, which is in the factor _bcr\_patient\_barcode_.
+
+We select those patient identification that are in normal tissue and in tumor tissue.
+
+```{r}
+normal <- data.frame(colData(se)[colData(se)$type == 'normal',])$bcr_patient_barcode
+tumor <- data.frame(colData(se)[colData(se)$type == 'tumor',])$bcr_patient_barcode
+length(normal)
+length(tumor)
+```
+
+We have 51 samples with normal tissue and 502 samples with tumoral tissue. Let's see which of the normal samples share patient identification with tumor samples.
+
+```{r}
+common_bcr_patient_barcode <- normal[normal %in% tumor]
+
+length(common_bcr_patient_barcode)
+```
+
+47 patient identification are in normal samples and tumor samples. This means that for those patients, there were extraction for normal tissue and for tumoral tissue. 
+
+Now, we filter the SummarizedExperiment object to keep only these patients.
+
+```{r}
+paired_seLUSC <- se[,colData(se)$bcr_patient_barcode %in% common_bcr_patient_barcode]
+paired_seLUSC
+```
+
+Now, there are 20115 genes, the same as before because we have not filtered genes, and 94 samples, which are 47 normal samples and 47 tumoral samples, with the same patient identificacion.
+
+```{r}
+length(unique(paired_seLUSC$bcr_patient_barcode))
+length(levels(paired_seLUSC$bcr_patient_barcode))
+```
+
+Analyzing the length of the array that contains the patient identification and its levels, we see that, although we have discarded the patients that did not pass the filter of the paired design, the levels are still with all the patient identifications, 495.
+
+When doing differential expression analysis, the levels are taken to build the design matrix. For this reason, as the leves are still the one in the raw data, we have to take out the levels that are not in the array of patient identifications.
+
+```{r}
+paired_seLUSC$bcr_patient_barcode <- droplevels(paired_seLUSC$bcr_patient_barcode)
+length(unique(paired_seLUSC$bcr_patient_barcode))
+length(levels(paired_seLUSC$bcr_patient_barcode))
+```
+
+Now we have 47 patient identifications and also 47 levels. Now we can save this filtered SummarizedExperiment in an RDS file.
+
+```{r}
+saveRDS(paired_seLUSC, file.path("results", "paired_seLUSC.rds"))
+```
+
+## Session information
+
+```{r, message=FALSE}
+sessionInfo()
+```
