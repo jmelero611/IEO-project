@@ -1,0 +1,200 @@
+---
+output:
+  BiocStyle::html_document
+---
+
+
+```{r setup, cache=FALSE, echo=FALSE, results='hide', message=FALSE}
+library(knitr)
+library(SummarizedExperiment)
+library(edgeR)
+library(geneplotter)
+
+opts_chunk$set(cache=TRUE,
+               cache.path="cache/file2",
+               cache.extra=R.version.string,
+               autodep=TRUE,
+               fig.align="center",
+               comment="")
+
+se.filt <- readRDS(file.path("results", "paired_se.filt.rds"))
+dge.filt <- readRDS(file.path("results", "paired_dge.filt.rds"))
+```
+
+# Classical functional annotation
+
+As there is no differentially expressed gene, we cannot do any classical functional enrichment, since it is necessary to have a list of differentially expressed genes.
+
+# Gene Set Enrichmen analysis (GSEA)
+
+
+```{r}
+geneUniverse <- rownames(se.filt)
+length(geneUniverse)
+```
+
+In this case a method for pathway analysis that addresses this shortcoming by assessing differential expression directly at gene set level is used. Therfore, small but consistent changes occurring for a number of genes operating in a common pathway will be found. To perform this it is calculated for each gene set an enrichment score (ES) as function of the changes in gene expression by the genes forming the gene set.
+
+The used gene set collection has been downloaded from GSEA. It is configured of gene sets that represent signatures of cellular pathways which are often disregulated in cancer.
+
+```{r, echo = FALSE}
+library(GSEABase)
+entrezOncogens <- getGmt("c6.all.v6.1.entrez.gmt", geneIdType = EntrezIdentifier())
+entrezOncogens
+length(entrezOncogens)
+head(names(entrezOncogens))
+```
+
+There are `r length(entrezOncogens)` gene sets in this gene sets collection.
+
+First we map the identifiers from the gene sets to the identifiers of the data we are going to analyze.
+
+```{r}
+gsc <- mapIdentifiers(entrezOncogens, AnnoOrEntrezIdentifier(metadata(se.filt)$annotation))
+gsc
+```
+
+in this case, nothing has happend, we could jump this step because data is already anchorated to Entrez identifiers. Now, we start with an incidence matrix indicating what genes belong to what gene set.
+
+```{r}
+Im <- incidence(gsc)
+dim(Im)
+Im[1:2, 1:10]
+```
+
+The incidence matrix is a matrix in which the rows represent the gene sets, the columns represent the gene in entrez identifier, and the data is 1 or 0, depending whether the gene is in the gene set or it is not.
+
+Next, we discard genes (columns in the incidence matrix) that do not form part of our data.
+
+```{r}
+Im <- Im[, colnames(Im) %in% rownames(se.filt)]
+dim(Im)
+```
+
+From 11250 of the genes in the gene sets, only 6067 are in our experiment. The rest may have been filtered during the quality assessment process.
+
+As not all the genes in our experiment are present in the gene sets, we discard them.
+
+```{r}
+se.filt <- se.filt[colnames(Im), ]
+dim(se.filt)
+dge.filt <- dge.filt[colnames(Im), ]
+dim(dge.filt)
+```
+
+Now we perform limma pipeline combined with SVA to create a table of genes and their t-statistic to do the GSEA. The pipeline is the same as in differential expression analysis, but now with less genes (we have filtered them)
+
+
+
+```{r}
+library(limma)
+library(sva)
+mod <- model.matrix(~se.filt$type + bcr_patient_barcode, data = colData(se.filt))
+mod0 <- model.matrix(~1, data = colData(se.filt))
+sv <- sva(assays(se.filt)$logCPM, mod = mod, mod0 = mod0)
+mod <- cbind(mod, sv$sv)
+colnames(mod) <- c(colnames(mod)[1:48], paste0("SV", 1:sv$n))
+v <- voom(dge.filt, mod)
+fit <- lmFit(assays(se.filt)$logCPM, mod)
+fit <- eBayes(fit, trend = TRUE)
+tt <- topTable(fit, coef = 2, n = Inf)
+```
+
+Now we can calculate the z-score, that gives us more robustness about analyzing the moderated t-statistic. We select only those gene sets with more than 5 genes and sort the z-score to see the most significant gene sets.
+
+```{r}
+Im <- Im[rowSums(Im) >= 5, ]
+dim(Im)
+tGSgenes <- tt[match(colnames(Im), rownames(tt)), "t"]
+length(tGSgenes)
+head(tGSgenes)
+zS <- sqrt(rowSums(Im)) * (as.vector(Im %*% tGSgenes)/rowSums(Im))
+length(zS)
+head(zS)
+rnkGS <- sort(abs(zS), decreasing = TRUE)
+head(rnkGS)
+```
+
+## QQ plot
+
+A QQ plot may show visually how the z-scores are distributed.
+
+```{r}
+qqnorm(zS)
+abline(0,1)
+```
+
+This QQ plot shows that the z-scores do not follow a normal distribution. Under the null hypothesis, those z-scores representing gene sets that are not enriched follow a normal distribution, but this does not happens. Maybe because overlapping gene sets or because as this gene set is specific for cancer and we are analyzing cancer cells, the pathways are all significant.
+
+Let's adjust for the p-value to fins differential expressed gene sets.
+
+```{r}
+pv <- pmin(pnorm(zS), 1 - pnorm(zS))
+pvadj <- p.adjust(pv, method = "fdr")
+DEgs <- names(pvadj)[which(pvadj < 0.01)]
+length(DEgs)
+```
+
+There is no gene set enriched.
+
+
+# Gene Set Variation Analysis (GSVA)
+
+GSVA is another way to analyze the gene sets without a list of differentially expressed genes. This has some properties that can be useful when differential expression analysis and GSEA do not work.
+
+```{r}
+library(GSVA)
+GSexpr <- gsva(assays(se.filt)$logCPM, gsc, min.sz=5, max.sz=300, verbose=FALSE)
+GSexpr
+dim(GSexpr)
+```
+
+We create an expression data matrix, in which the rows are gene sets, the columns are samples and the data is the ES. We have 189 gene sets and 94 samples. We perform SVA with this matrix and perform a differential expression pipeline, but instead of doing it with genes, we do it with gene sets.
+
+```{r}
+mod <- model.matrix(~se.filt$type + bcr_patient_barcode, data = colData(se.filt))
+mod0 <- model.matrix(~1, data = colData(se.filt))
+svaobj <- sva(GSexpr, mod, mod0)
+modSVs <- cbind(mod, svaobj$sv)
+
+fit <- lmFit(GSexpr, modSVs)
+fit <- eBayes(fit)
+tt <- topTable(fit, coef = 2, n = Inf)
+DEgs <- rownames(tt[tt$adj.P.Val < 0.01, , drop = FALSE])
+length(DEgs)
+```
+
+At the end, we have `r length(DEgs)` gene sets differentially expressed. The most significant ones can be seen at the top table tt.
+
+```{r}
+head(tt)
+```
+
+Although the log fold-change is not large, they are very significant.
+
+#Volcano plot of GSVA
+
+A volcano plot can help us to visualize the results
+
+```{r}
+plot(tt$logFC, -log10(tt$P.Value), xlab="Log2 fold-change", ylab="-log10 P-value",
+     pch=".", cex=5, col=grey(0.75), cex.axis=1.2, cex.lab=1.5, las=1)
+posx <- tt[tt$adj.P.Val < 0.01, "logFC"] ; posy <- -log10(tt[tt$adj.P.Val < 0.01, "P.Value"])
+points(posx, posy, pch=".", cex=5, col="red")
+```
+
+It is seen to be a lot of gene sets differentially expressed as well.
+
+
+
+
+
+
+
+
+
+
+
+
+
+

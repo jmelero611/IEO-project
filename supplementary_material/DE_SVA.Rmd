@@ -1,0 +1,95 @@
+---
+output:
+  BiocStyle::html_document
+---
+
+
+```{r setup, cache=FALSE, echo=FALSE, results='hide', message=FALSE}
+library(knitr)
+library(SummarizedExperiment)
+library(edgeR)
+
+opts_chunk$set(cache=TRUE,
+               cache.path="cache/file2",
+               cache.extra=R.version.string,
+               autodep=TRUE,
+               fig.align="center",
+               comment="")
+
+se.filt <- readRDS(file.path("results", "paired_se.filt.rds"))
+dge.filt <- readRDS(file.path("results", "paired_dge.filt.rds"))
+```
+
+# Surrogate Variable Analysis
+We perform differentual expression analysis using limma pipeline, combined with the surrogate variable analysis using the R/Bioconductor package [sva](http://bioconductor.org/packages/sva).
+
+
+First, we do the SVA to adjust for surrogated variables. In the design matrix is also included the patient identifications. 
+
+```{r}
+library(sva)
+
+mod <- model.matrix(~type + bcr_patient_barcode, data = colData(se.filt))
+mod0 <- model.matrix(~1, data = colData(se.filt))
+
+
+sv <- sva(assays(se.filt)$logCPM, mod = mod, mod0 = mod0)
+sv$n
+```
+There are `r sv$n` surrogate variables. We combine the model matrix with the surrogate variables.
+
+
+```{r}
+mod <- cbind(mod, sv$sv)
+colnames(mod) <- c(colnames(mod)[1:(nlevels(se.filt$bcr_patient_barcode)+1)], paste0("SV", 1:sv$n))
+```
+
+# Differential expression analysis with limma-voom
+
+Now we perform limma-voom method to adjust for mean-variance relationship. We use lmFit function to calculate the linear model and eBayes function to calculate the moderated t-statistic. Finally, decideTests function will classify into upregulated, downregulated or non-significant.
+
+```{r}
+v <- voom(dge.filt, mod, plot=TRUE)
+
+fit <- lmFit(v, mod)
+fit <- eBayes(fit)
+
+FDRcutoff <- 0.1
+res <- decideTests(fit, p.value = FDRcutoff)
+summary(res)
+```
+
+There is no differentially expressed gene. All genes are non-significant for the _type_ variable, which is our variable of interest.
+
+We can build a table to classify and sort the genes by p-value.
+
+```{r}
+genesmd <- data.frame(chr = as.character(seqnames(rowRanges(se.filt))), symbol = rowData(se.filt)[, 1], stringsAsFactors = FALSE)
+
+fit$genes <- genesmd
+
+tt <- topTable(fit, coef = 2, n = Inf)
+head(tt, n = 10)
+```
+
+As we can see in the table, the adjusted p-values are close to 1. For this reason, they are far from being significant.
+
+## Raw p-values distribution
+
+Under the null-hypothesis, the distribution of raw p-values must be uniform. We plot a histogram with the p-values and a QQ-plot.
+
+```{r}
+par(mfrow = c(1, 2), mar = c(4, 5, 2, 2))
+hist(tt$P.Value, xlab = "Raw P-values", main = "", las = 1)
+qqt(fit$t[, 2], df = fit$df.prior + fit$df.residual, main = "", pch = ".", cex = 3)
+abline(0, 1, lwd = 2)
+```
+
+Both plots show that the disribution is far from being uniform. This may be because some variability not explained neither by the biological factor nor by the surrogate variables. More quality assessments could be done in order to correct for this biases.
+
+
+## Session information
+
+```{r, message=FALSE}
+sessionInfo()
+```
