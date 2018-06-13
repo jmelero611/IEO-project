@@ -1,0 +1,25 @@
+unnamed-chunk-1	fit	genesmd	tt
+unnamed-chunk-2	DEgenes
+unnamed-chunk-3	hgOver	hgOverCond	params
+unnamed-chunk-4	goresults
+p-values	
+unnamed-chunk-5	goresults
+pvalues	
+voom	FDRcutoff	fit	res	v
+unnamed-chunk-6	entrezOncogens
+unnamed-chunk-7	gsc
+unnamed-chunk-8	Im
+unnamed-chunk-9	Im
+unnamed-chunk-10	dge.filt	se.filt
+unnamed-chunk-11	GSexpr
+unnamed-chunk-12	DEgs	fit	mod	tt
+unnamed-chunk-13	
+unnamed-chunk-14	posx	posy
+voom2, 	FDRcutoff	fit	mod	res	v
+MAplotNoSVA, 	top10
+pvaluesNoSVA	
+MAplotNoSVA	top10
+qqplotSVA	
+volcanoplotSVA	posx	posy
+voomenrichment	fit	Im	mod	rnkGS	tGSgenes	tt	v	zS
+volcanoGSVA	posx	posy

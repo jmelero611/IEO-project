@@ -175,9 +175,11 @@ In the volcano plot, Figure \@ref(fig:MAplotNoSVA), is seen the top 10 genes, al
 
 ##Plot p-values
 
+Both plots in Figure \@ref(fig:pvaluesNoSVA) show that the disribution is far from being uniform. This may be because some variability not explained by the biological factor. Moreover, surrogate variables are not analysed in this case. More quality assessments could be done in order to correct for this biases.
+
 <div class="figure" style="text-align: center">
 <img src="DEanalysis_limma-voom_noSVA_files/figure-html/pvaluesNoSVA-1.png" alt="p-values" width="100%" />
 <p class="caption">(\#fig:pvaluesNoSVA)p-values</p>
 </div>
 
-Both plots in Figure \@ref(fig:pvaluesNoSVA) show that the disribution is far from being uniform. This may be because some variability not explained by the biological factor. Moreover, surrogate variables are not analysed in this case. More quality assessments could be done in order to correct for this biases.
+

@@ -1,0 +1,25 @@
+unnamed-chunk-1	genesmd	data.frame	as.character	seqnames	rowRanges	se.filt	rowData	fit	genes	tt	topTable	head
+unnamed-chunk-2	DEgenes	rownames	tt	adj.P.Val	FDRcutoff	length	saveRDS	file.path
+unnamed-chunk-3	hgOver	hyperGTest	params	conditional	hgOverCond
+unnamed-chunk-4	goresults	summary	hgOverCond	head
+p-values	par	c	hist	tt	P.Value	qqt	fit	t	df.prior	df.residual	abline
+unnamed-chunk-5	goresults	Size	Count	order	OddsRatio	head
+pvalues	par	c	hist	tt	P.Value	qqt	fit	t	df.prior	df.residual	abline
+voom	v	voom	dge.filt	mod	fit	lmFit	eBayes	FDRcutoff	res	decideTests	summary
+unnamed-chunk-6	library	GSEABase	entrezOncogens	getGmt	EntrezIdentifier	length	head	names
+unnamed-chunk-7	gsc	mapIdentifiers	entrezOncogens	AnnoOrEntrezIdentifier	metadata	se.filt	annotation
+unnamed-chunk-8	Im	incidence	gsc	dim
+unnamed-chunk-9	Im	colnames	%in%	rownames	se.filt	dim
+unnamed-chunk-10	se.filt	colnames	Im	dim	dge.filt
+unnamed-chunk-11	library	GSVA	GSexpr	gsva	assays	se.filt	logCPM	gsc	class	dim
+unnamed-chunk-12	mod	model.matrix	se.filt	type	bcr_patient_barcode	colData	fit	lmFit	GSexpr	eBayes	tt	topTable	DEgs	rownames	adj.P.Val	length
+unnamed-chunk-13	sessionInfo
+unnamed-chunk-14	plot	tt	logFC	log10	P.Value	grey	posx	adj.P.Val	posy	points
+voom2, 	library	sva	mod	model.matrix	type	bcr_patient_barcode	colData	se.filt	v	voom	dge.filt	fit	lmFit	eBayes	FDRcutoff	res	decideTests	summary
+MAplotNoSVA, 	par	c	volcanoplot	fit	genes	symbol	top10	order	lods	plotMA	rownames	%in%	DEgenes	text	Amean	coef
+pvaluesNoSVA	par	c	hist	tt	P.Value	qqt	fit	t	df.prior	df.residual	abline
+MAplotNoSVA	par	c	volcanoplot	fit	genes	symbol	top10	order	lods	plotMA	rownames	%in%	DEgenes	text	Amean	coef
+qqplotSVA	qqnorm	zS	abline
+volcanoplotSVA	plot	tt	logFC	log10	P.Value	grey	posx	adj.P.Val	posy	points
+voomenrichment	library	limma	sva	mod	model.matrix	type	bcr_patient_barcode	colData	se.filt	v	voom	dge.filt	fit	lmFit	assays	logCPM	eBayes	tt	topTable	Im	rowSums	dim	tGSgenes	match	colnames	rownames	length	head	zS	sqrt	as.vector	%*%	rnkGS	sort	abs
+volcanoGSVA	plot	tt	logFC	log10	P.Value	grey	posx	adj.P.Val	posy	points	text	rownames

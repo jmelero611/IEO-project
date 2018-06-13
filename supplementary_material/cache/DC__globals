@@ -1,0 +1,8 @@
+unnamed-chunk-1	library	SummarizedExperiment	se	readRDS	file.path
+unnamed-chunk-2	normal	data.frame	colData	se	type	bcr_patient_barcode	tumor	length
+unnamed-chunk-3	common_bcr_patient_barcode	normal	%in%	tumor	length
+unnamed-chunk-4	paired_seLUSC	se	colData	bcr_patient_barcode	%in%	common_bcr_patient_barcode
+unnamed-chunk-5	length	unique	paired_seLUSC	bcr_patient_barcode	levels
+unnamed-chunk-6	paired_seLUSC	bcr_patient_barcode	droplevels	length	unique	levels
+unnamed-chunk-7	saveRDS	paired_seLUSC	file.path
+unnamed-chunk-8	sessionInfo

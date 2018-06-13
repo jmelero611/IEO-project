@@ -1,0 +1,34 @@
+unnamed-chunk-1	library	SummarizedExperiment	paired_se	readRDS	file.path
+unnamed-chunk-2	dim	colData	paired_se	mcols
+unnamed-chunk-3	rowData	paired_se	rowRanges
+unnamed-chunk-4	table	paired_se	type
+unnamed-chunk-5	library	edgeR	paired_dge	DGEList	assays	paired_se	counts	mcols	names	saveRDS	file.path
+unnamed-chunk-6	assays	paired_se	logCPM	cpm	paired_dge
+libsizes	ord	order	paired_dge	sample	lib.size	barplot	c	paired_se	type	legend	title
+distRawExp	library	geneplotter	par	c	multidensity	as.list	as.data.frame	assays	paired_se	type	logCPM
+exprdist	avgexp	rowMeans	assays	paired_se	logCPM	hist	abline
+unnamed-chunk-7	paired_dge	samples	group	paired_se	type	table
+smear1	plotSmear	paired_dge	abline
+unnamed-chunk-8	mask	avgexp	dim	paired_se	paired_se.filt	paired_dge.filt	paired_dge
+unnamed-chunk-9	saveRDS	paired_se.filt	file.path	paired_dge.filt
+unnamed-chunk-10	cpmcutoff	round	min	paired_dge	sample	lib.size	nsamplescutoff	table	paired_se	type
+unnamed-chunk-11	mask2	rowSums	cpm	paired_dge	cpmcutoff	nsamplescutoff	paired_se.filt2	paired_se	paired_dge.filt2	dim	paired_se.filt
+unnamed-chunk-12	saveRDS	paired_se.filt2	file.path	paired_dge.filt2
+exprdist2	par	c	h	hist	avgexp	x	cut	rowMeans	assays	paired_se.filt	logCPM	breaks	lines	mids	table	y	paired_se.filt2	legend
+unnamed-chunk-13	paired_dge.filt	calcNormFactors
+unnamed-chunk-14	assays	paired_se.filt	logCPM	cpm	paired_dge.filt
+unnamed-chunk-15	saveRDS	paired_se.filt	file.path	paired_dge.filt
+unnamed-chunk-16	paired_dge	samples	group	paired_se	type	table	paired_dge.filt
+smear2	plotSmear	paired_dge.filt	abline
+maPlotsTumor	par	c	setmp	paired_se.filt	type	dgetmp	paired_dge.filt	i	ncol	A	rowMeans	assays	logCPM	M	samplename	substr	as.character	bcr_patient_barcode	smoothScatter	abline	lo	lowess	lines	x	y
+maPlotsNormal	par	c	setmp	paired_se.filt	type	dgetmp	paired_dge.filt	paired_se	i	ncol	A	rowMeans	assays	logCPM	M	samplename	substr	as.character	bcr_patient_barcode	smoothScatter	abline	lo	lowess	lines	x	y
+unnamed-chunk-17	tss	substr	colnames	paired_se.filt	table	center	plate	portionanalyte	samplevial
+unnamed-chunk-18	table	data.frame	paired_se.filt	type	tss
+unnamed-chunk-19	table	data.frame	paired_se.filt	type	portionanalyte	plate	samplevial
+sampleClustering1	logCPM	cpm	paired_dge.filt	d	as.dist	cor	sampleClustering	hclust	batch	as.integer	factor	paired_se.filt	type	sampleDendrogram	as.dendrogram	names	colnames	outcome	paste	substr	as.character	dendrapply	is.leaf	x	attr	list	as.vector	labels	plot	legend	sort	unique	levels
+mdsPlot1	plotMDS	paired_dge.filt	outcome	batch	legend	paste	sort	unique	levels	factor	paired_se.filt	type
+unnamed-chunk-20	maskbad	colnames	paired_se.filt	%in%	substr	dim	paired_dge.filt
+sampleClustering2	logCPM	cpm	paired_dge.filt	d	as.dist	cor	sampleClustering	hclust	batch	as.integer	factor	paired_se.filt	type	sampleDendrogram	as.dendrogram	names	colnames	outcome	paste	substr	as.character	dendrapply	is.leaf	x	attr	list	as.vector	labels	plot	legend	sort	unique	levels
+mdsPlot2	plotMDS	paired_dge.filt	outcome	batch	legend	paste	sort	unique	levels	factor	paired_se.filt	type
+unnamed-chunk-21	saveRDS	paired_se.filt	file.path	paired_dge.filt
+unnamed-chunk-22	sessionInfo
