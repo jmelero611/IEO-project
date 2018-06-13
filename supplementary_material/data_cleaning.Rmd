@@ -44,7 +44,6 @@ We have 51 samples with normal tissue and 502 samples with tumoral tissue. Let's
 
 ```{r}
 common_bcr_patient_barcode <- normal[normal %in% tumor]
-
 length(common_bcr_patient_barcode)
 ```
 
@@ -78,10 +77,4 @@ Now we have 47 patient identifications and also 47 levels. Now we can save this 
 
 ```{r}
 saveRDS(paired_seLUSC, file.path("results", "paired_seLUSC.rds"))
-```
-
-## Session information
-
-```{r, message=FALSE}
-sessionInfo()
 ```

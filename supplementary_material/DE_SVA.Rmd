@@ -48,7 +48,7 @@ colnames(mod) <- c(colnames(mod)[1:(nlevels(se.filt$bcr_patient_barcode)+1)], pa
 
 Now we perform limma-voom method to adjust for mean-variance relationship. We use lmFit function to calculate the linear model and eBayes function to calculate the moderated t-statistic. Finally, decideTests function will classify into upregulated, downregulated or non-significant.
 
-```{r}
+```{r voom, fig.cap="Voom plot"  }
 v <- voom(dge.filt, mod, plot=TRUE)
 
 fit <- lmFit(v, mod)
@@ -76,20 +76,13 @@ As we can see in the table, the adjusted p-values are close to 1. For this reaso
 
 ## Raw p-values distribution
 
-Under the null-hypothesis, the distribution of raw p-values must be uniform. We plot a histogram with the p-values and a QQ-plot.
+Under the null-hypothesis, the distribution of raw p-values must be uniform. We plot a histogram with the p-values and a QQ-plot (Figure \@ref(fig:pvalues)). 
 
-```{r}
+Both plots show that the disribution is far from being uniform. This may be because some variability not explained neither by the biological factor nor by the surrogate variables. More quality assessments could be done in order to correct for this biases.
+
+```{r pvalues, fig.cap="p-values and QQ-plot.", message=FALSE, echo=FALSE}
 par(mfrow = c(1, 2), mar = c(4, 5, 2, 2))
 hist(tt$P.Value, xlab = "Raw P-values", main = "", las = 1)
 qqt(fit$t[, 2], df = fit$df.prior + fit$df.residual, main = "", pch = ".", cex = 3)
 abline(0, 1, lwd = 2)
-```
-
-Both plots show that the disribution is far from being uniform. This may be because some variability not explained neither by the biological factor nor by the surrogate variables. More quality assessments could be done in order to correct for this biases.
-
-
-## Session information
-
-```{r, message=FALSE}
-sessionInfo()
 ```

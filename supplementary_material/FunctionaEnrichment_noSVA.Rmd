@@ -21,18 +21,15 @@ se.filt <- readRDS(file.path("results", "paired_se.filt.rds"))
 dge.filt <- readRDS(file.path("results", "paired_dge.filt.rds"))
 DEgenes <- readRDS(file.path("results", "DEgenes.rds"))
 ```
+# Gene Ontology analysis
 
-We will start with a Gene Onthology analysis of the DE genes. The first step is safe the identifiers of the of the original set of gene profiled. Then we will follow the main speps of the GO analysis. 
-  1) Build a parameter object with information specifying the gene universe, the set of DE genes, the annotation package to use, etc.
-  2) Run the functional enrichment analysis.
-  3) Store and visualize the results.
+We will start with a Gene Onthology analysis of the DE genes. The first step is safe the identifiers of the of the original set of gene profiled. Then we will follow the main steps of the GO analysis. This steps are: 1) build a parameter object with information specifying the gene universe, the set of DE genes, the annotation package to use, and so one, 2) run the functional enrichment analysis, and 3) store and visualize the results.
 
 ```{r}
 geneUniverse <- rownames(se.filt)
 length(geneUniverse)
 ```
 
-1)
 ```{r, message=FALSE}
 library(GOstats)
 params <- new("GOHyperGParams", geneIds=DEgenes, universeGeneIds=geneUniverse,
@@ -40,7 +37,7 @@ params <- new("GOHyperGParams", geneIds=DEgenes, universeGeneIds=geneUniverse,
             pvalueCutoff=0.05, testDirection="over")
 ```
 
-2) Since a problem in a GO analysis is that the hierarchy of GO terms and their overlap render highly dependent tests. A conditional test is directly used. Then, if parent and child GO term contain the same significant genes, the child node will be retrieved because it is more specific.
+Since a problem in a GO analysis is that the hierarchy of GO terms and their overlap render highly dependent tests. A conditional test is directly used. Then, if parent and child GO term contain the same significant genes, the child node will be retrieved because it is more specific. The no-conditional test is also done to allow the comparison between the two test results. 
 ```{r}
 hgOver <- hyperGTest(params)
 hgOver
@@ -50,22 +47,20 @@ hgOverCond
 ```
 As spected we have less significant GO terms when conditional test is used than when we perform a non-conditional test. The number of significant GO terms have chenged from 136 to 85. 
 
-
-3) This is the data.frame object with the results:
+This is the data.frame object with the results:
 ```{r}
 goresults <- summary(hgOverCond)
 head(goresults)
 ```
 
 GO terms involving a few genes (e.g., < 3) in their size (m) and in their enrichment by DE genes (k) are likely to be less reliable than those that involve many genes. Likewise, large GO terms may provide little insight. To try to spot the more interesting and reliable GO terms we can filter the previous results by a minimum value on the Count and Size columns, a maximum Count value, and order them by the OddsRatio column:
-
 ```{r}
 goresults <- goresults[goresults$Size >= 3 & goresults$Size <= 300 & goresults$Count >= 3, ]
 goresults <- goresults[order(goresults$OddsRatio, decreasing=TRUE), ]
 head(goresults)
 ```
 
-## Gene set enrichment analysis
+# Gene Set Enrichment Analysis (GSEA)
 In this case a method for pathway analysis that addresses this shortcoming by assessing DE directly at gene set level is used. Therfore, small but consistent changes occurring for a number of genes operating in a common pathway will be found. To perform this it is calculated for each gene set an enrichment score (ES) as function of the changes in gene expression by the genes forming the gene set.
 
 The used gene set collection has been downloaded from GSEA. It is configured of gene sets that represent signatures of cellular pathways which are often disregulated in cancer.
@@ -105,7 +100,7 @@ dge.filt <- dge.filt[colnames(Im), ]
 dim(dge.filt)
 ```
 
-```{r}
+```{r voomenrichment, echo=FALSE, fig.cap="Voom plot" }
 library(limma)
 library(sva)
 mod <- model.matrix(~type + bcr_patient_barcode, data = colData(se.filt))
@@ -126,7 +121,7 @@ rnkGS <- sort(abs(zS), decreasing = TRUE)
 head(rnkGS)
 ```
 
-# Gene Set Variation Analysis
+# Gene Set Variation Analysis (GSVA)
 
 ```{r}
 library(GSVA)
@@ -142,14 +137,14 @@ fit <- lmFit(GSexpr, mod)
 fit <- eBayes(fit)
 tt <- topTable(fit, coef = 2, n = Inf)
 DEgs <- rownames(tt[tt$adj.P.Val < 0.01, , drop = FALSE])
-DEgs
+length(DEgs)
 
 ```
 
 
-#Volcano plot GSVA
+##GSVA volcano plot
 
-```{r}
+```{r volcanoGSVA, echo=FALSE, fig.cap="GSVA volcano plot" }
 plot(tt$logFC, -log10(tt$P.Value), xlab="Log2 fold-change", ylab="-log10 P-value",
      pch=".", cex=5, col=grey(0.75), cex.axis=1.2, cex.lab=1.5, las=1)
 posx <- tt[tt$adj.P.Val < 0.01, "logFC"] ; posy <- -log10(tt[tt$adj.P.Val < 0.01, "P.Value"])
@@ -158,7 +153,9 @@ text(posx, posy, rownames(tt)[tt$adj.P.Val < 0.01], pos=1)
 ```
 
 
-
+```{r}
+sessionInfo()
+```
 
 
 

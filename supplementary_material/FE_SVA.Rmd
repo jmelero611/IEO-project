@@ -85,7 +85,6 @@ dim(dge.filt)
 Now we perform limma pipeline combined with SVA to create a table of genes and their t-statistic to do the GSEA. The pipeline is the same as in differential expression analysis, but now with less genes (we have filtered them)
 
 
-
 ```{r}
 library(limma)
 library(sva)
@@ -117,9 +116,9 @@ head(rnkGS)
 
 ## QQ plot
 
-A QQ plot may show visually how the z-scores are distributed.
+A QQ plot (Figure \@ref(fig:qqplotSVA)) may show visually how the z-scores are distributed.
 
-```{r}
+```{r, qqplotSVA, echo=FALSE, fig.cap="QQ-plot."}
 qqnorm(zS)
 abline(0,1)
 ```
@@ -145,7 +144,6 @@ GSVA is another way to analyze the gene sets without a list of differentially ex
 ```{r}
 library(GSVA)
 GSexpr <- gsva(assays(se.filt)$logCPM, gsc, min.sz=5, max.sz=300, verbose=FALSE)
-GSexpr
 dim(GSexpr)
 ```
 
@@ -172,18 +170,18 @@ head(tt)
 
 Although the log fold-change is not large, they are very significant.
 
-#Volcano plot of GSVA
+##Volcano plot of GSVA
 
-A volcano plot can help us to visualize the results
+A volcano plot can help us to visualize the results. In figure \@ref(fig:volcanoplotSVA) It is seen to be a lot of gene sets differentially expressed as well.
 
-```{r}
+```{r volcanoplotSVA, echo=FALSE, fig.cap="Volcano plot."}
 plot(tt$logFC, -log10(tt$P.Value), xlab="Log2 fold-change", ylab="-log10 P-value",
      pch=".", cex=5, col=grey(0.75), cex.axis=1.2, cex.lab=1.5, las=1)
 posx <- tt[tt$adj.P.Val < 0.01, "logFC"] ; posy <- -log10(tt[tt$adj.P.Val < 0.01, "P.Value"])
 points(posx, posy, pch=".", cex=5, col="red")
 ```
 
-It is seen to be a lot of gene sets differentially expressed as well.
+
 
 
 
